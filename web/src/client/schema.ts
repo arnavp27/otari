@@ -6691,40 +6691,16 @@ export interface components {
             /** Provider Type */
             provider_type: string;
         };
-        /** CatalogFacet */
-        CatalogFacet: {
-            /**
-             * Count
-             * @description Matching models before paging; one model can belong to several choices.
-             */
-            count: number;
-            /** Value */
-            value: string;
-        };
         /**
          * CatalogFacets
-         * @description Choices come from the authorized catalog; counts apply every active filter.
+         * @description The filter rail's choices, from the caller's whole authorized catalog rather than one page.
          */
         CatalogFacets: {
-            /** Capabilities */
-            capabilities: components["schemas"]["CatalogFacet"][];
-            /** Input Modalities */
-            input_modalities: components["schemas"]["CatalogFacet"][];
-            /** Output Modalities */
-            output_modalities: components["schemas"]["CatalogFacet"][];
-            /** Price Sources */
-            price_sources: components["schemas"]["CatalogFacet"][];
-            /** Pricing */
-            pricing: components["schemas"]["CatalogFacet"][];
             /**
-             * Provider Count
-             * @description Distinct provider instances among matching models before paging.
+             * Providers
+             * @description Every provider instance offering an authorized model, sorted.
              */
-            provider_count: number;
-            /** Providers */
-            providers: components["schemas"]["CatalogFacet"][];
-            /** Source */
-            source: components["schemas"]["CatalogFacet"][];
+            providers: string[];
             /**
              * Total Count
              * @description Authorized models before any of the request's filters.
@@ -7032,11 +7008,9 @@ export interface components {
         /** CatalogVendorFacet */
         CatalogVendorFacet: {
             /**
-             * Count
-             * @description Matching models before paging; one model can belong to several choices.
+             * Value
+             * @description The vendor's name; empty for models whose vendor is unknown.
              */
-            count: number;
-            /** Value */
             value: string;
             /** Vendor Slug */
             vendor_slug?: string | null;
@@ -15498,7 +15472,7 @@ export interface operations {
     "catalog-list_catalog": {
         parameters: {
             query?: {
-                /** @description Compare prices at this many input tokens. */
+                /** @description Compare prices for a request of this many input tokens: each model's minimum is taken from the pricing tier that request would settle at. Omitted, the base rates compare. */
                 at_context?: number | null;
                 /** @description Case-insensitive text in a model's name, vendor, id, selectors, or provider instances. */
                 search?: string | null;
@@ -15526,7 +15500,7 @@ export interface operations {
                 released_within_days?: number;
                 sort?: "name" | "released" | "input" | "output" | "context" | "providers";
                 direction?: "asc" | "desc";
-                /** @description Include counts over all matches before paging, with zero-count choices retained from the authorized catalog. */
+                /** @description Include the filter choices drawn from the whole authorized catalog. */
                 include_facets?: boolean;
             };
             header?: never;

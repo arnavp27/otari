@@ -142,26 +142,17 @@ def test_all_sort_columns_and_name_ties_have_deterministic_pages() -> None:
     assert query_catalog(MODELS, CatalogQuery(sort="released", direction="desc")).models == [GLM, KIMI, LOCAL]
 
 
-def test_facets_count_filtered_models_before_paging_and_retain_authorized_zero_choices() -> None:
+def test_facets_list_every_authorized_choice_whatever_the_filters_match() -> None:
     facets = query_catalog(
         MODELS, CatalogQuery.model_validate({"capability": ["reasoning"], "include_facets": True, "limit": 1})
     ).facets
     assert facets is not None
     assert facets.total_count == 3
-    assert facets.provider_count == 2
-    assert {facet.value: facet.count for facet in facets.providers} == {"fireworks": 1, "nebius": 1, "home_lab": 0}
-    assert {facet.value: facet.count for facet in facets.vendors} == {"": 0, "Z.ai": 1, "Moonshot AI": 0}
+    assert facets.providers == ["fireworks", "home_lab", "nebius"]
+    assert [facet.value for facet in facets.vendors] == ["", "Moonshot AI", "Z.ai"]
     assert next(facet for facet in facets.vendors if facet.value == "Z.ai").vendor_slug == "z-ai"
-    assert {facet.value: facet.count for facet in facets.output_modalities} == {"text": 1, "image": 0}
-    assert {facet.value: facet.count for facet in facets.price_sources} == {"defaults": 1, "deployment": 1}
-    assert next(facet for facet in facets.capabilities if facet.value == "reasoning").count == 1
-    assert next(facet for facet in facets.pricing if facet.value == "custom").count == 1
-    assert next(facet for facet in facets.source if facet.value == "discovered").count == 1
     empty = query_catalog(MODELS, CatalogQuery(search="no-match", include_facets=True)).facets
-    assert empty is not None
-    assert empty.provider_count == 0
-    assert all(facet.count == 0 for facet in empty.providers)
-    assert empty.total_count == 3
+    assert empty == facets
 
 
 def test_matches_and_choices_beyond_the_old_thousand_model_window_are_available() -> None:
@@ -173,7 +164,7 @@ def test_matches_and_choices_beyond_the_old_thousand_model_window_are_available(
     facets = page.facets
     assert facets is not None
     assert facets.total_count == 1206
-    assert next(facet for facet in facets.vendors if facet.value == "Moonshot AI").count == 1
+    assert "Moonshot AI" in [facet.value for facet in facets.vendors]
 
 
 @pytest.mark.parametrize(

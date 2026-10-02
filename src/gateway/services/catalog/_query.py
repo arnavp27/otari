@@ -1,12 +1,10 @@
 """Pure selection over authorized summaries assembled from the catalog's sources."""
 
-from collections import Counter
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 from gateway.schemas.catalog import (
     CatalogCapability,
-    CatalogFacet,
     CatalogFacets,
     CatalogModelSummary,
     CatalogPage,
@@ -110,42 +108,19 @@ def _sorted_models(models: Sequence[CatalogModelSummary], query: CatalogQuery) -
     return known + unknown
 
 
-def _catalog_facets(models: Sequence[CatalogModelSummary], matched: Sequence[CatalogModelSummary]) -> CatalogFacets:
-    """Retain authorized choices even when the current filters match no rows."""
-
-    def facets(attribute: str) -> list[CatalogFacet]:
-        choices = {value for model in models for value in getattr(model, attribute)}
-        counts = Counter(value for model in matched for value in set(getattr(model, attribute)))
-        return [CatalogFacet(value=value, count=counts[value]) for value in sorted(choices)]
-
+def _catalog_facets(models: Sequence[CatalogModelSummary]) -> CatalogFacets:
+    """Choices come from the whole catalog, so a filter that matches nothing can still be undone."""
     vendor_slugs: dict[str, str | None] = {}
     for model in models:
         vendor = model.vendor or ""
         slug = model.id.partition("/")[0] if model.vendor and "/" in model.id else None
         vendor_slugs.setdefault(vendor, slug)
-    vendor_counts = Counter(model.vendor or "" for model in matched)
     return CatalogFacets(
         total_count=len(models),
-        provider_count=len({provider for model in matched for provider in model.providers}),
-        providers=facets("providers"),
+        providers=sorted({provider for model in models for provider in model.providers}),
         vendors=[
-            CatalogVendorFacet(value=vendor, count=vendor_counts[vendor], vendor_slug=vendor_slugs[vendor])
+            CatalogVendorFacet(value=vendor, vendor_slug=vendor_slugs[vendor])
             for vendor in sorted(vendor_slugs, key=lambda vendor: (vendor.casefold(), vendor))
-        ],
-        input_modalities=facets("input_modalities"),
-        output_modalities=facets("output_modalities"),
-        capabilities=[
-            CatalogFacet(value=capability.value, count=sum(_has_capability(model, capability) for model in matched))
-            for capability in CatalogCapability
-        ],
-        price_sources=facets("price_sources"),
-        pricing=[
-            CatalogFacet(value=choice, count=sum(_pricing_matches(model, choice) for model in matched))
-            for choice in ("all", "custom", "default", "priced", "unpriced")
-        ],
-        source=[
-            CatalogFacet(value=choice, count=sum(_source_matches(model, choice) for model in matched))
-            for choice in ("all", "discovered", "custom")
         ],
     )
 
@@ -155,6 +130,6 @@ def query_catalog(
 ) -> CatalogPage:
     """Filter and count the authorized catalog, then return one deterministically sorted page."""
     matched = _matching_models(models, query, now=now)
-    facets = _catalog_facets(models, matched) if query.include_facets else None
+    facets = _catalog_facets(models) if query.include_facets else None
     ordered = _sorted_models(matched, query)
     return CatalogPage(count=len(matched), models=ordered[query.skip : query.skip + query.limit], facets=facets)

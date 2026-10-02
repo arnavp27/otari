@@ -270,7 +270,6 @@ export type PricingTier = Schemas["PricingTier"]
 // list, and one detail carrying every offering of it the caller may use.
 export type CatalogResponse = Schemas["CatalogResponse"]
 export type CatalogFacets = Schemas["CatalogFacets"]
-export type CatalogFacet = Schemas["CatalogFacet"]
 export type CatalogVendorFacet = Schemas["CatalogVendorFacet"]
 export type CatalogQueryParams = NonNullable<
   operations["catalog-list_catalog"]["parameters"]["query"]

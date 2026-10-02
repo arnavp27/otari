@@ -142,21 +142,11 @@ const CATALOG: CatalogResponse = {
   models: [GLM, KIMI],
   facets: {
     total_count: 2,
-    provider_count: 2,
-    providers: [
-      { value: "fireworks", count: 1 },
-      { value: "nebius", count: 2 },
-    ],
+    providers: ["fireworks", "nebius"],
     vendors: [
-      { value: "Z.ai", count: 1, vendor_slug: "z-ai" },
-      { value: "Moonshot AI", count: 1, vendor_slug: "moonshot-ai" },
+      { value: "Z.ai", vendor_slug: "z-ai" },
+      { value: "Moonshot AI", vendor_slug: "moonshot-ai" },
     ],
-    input_modalities: [{ value: "text", count: 2 }],
-    output_modalities: [{ value: "text", count: 2 }],
-    capabilities: [{ value: "reasoning", count: 1 }],
-    price_sources: [],
-    pricing: [],
-    source: [],
   },
 }
 
@@ -502,10 +492,9 @@ describe("ModelCatalogPage", () => {
     const facets: CatalogFacets = {
       ...CATALOG.facets!,
       total_count: 1206,
-      provider_count: 3,
       vendors: [
         ...CATALOG.facets!.vendors,
-        { value: "Off-page vendor", count: 1204, vendor_slug: null },
+        { value: "Off-page vendor", vendor_slug: null },
       ],
     }
     mockApi({ catalog: { ...CATALOG, count: 1206, facets } })
@@ -544,39 +533,6 @@ describe("ModelCatalogPage", () => {
     expect(await within(list).findByText(/Kimi K2.6/)).toBeInTheDocument()
     expect(within(list).queryByText(/GLM-5.3/)).toBeNull()
     expect(screen.getByText(/26 models/)).toBeInTheDocument()
-  })
-
-  it("recovers from an out-of-range page in the URL", async () => {
-    const fetchMock = mockApi({
-      list: (params) => ({
-        ...CATALOG,
-        models: params.get("skip") === "0" ? [GLM, KIMI] : [],
-      }),
-    })
-    renderPage(<ModelCatalogPage />, "/models?page=99&size=25")
-    await screen.findByRole("list", { name: "Models" })
-    expect(
-      fetchMock.mock.calls.some(([input]) =>
-        String(input).includes("skip=2475"),
-      ),
-    ).toBe(true)
-    expect(
-      fetchMock.mock.calls.some(([input]) => String(input).includes("skip=0")),
-    ).toBe(true)
-  })
-
-  it("falls back to safe defaults for invalid URL paging values", async () => {
-    const fetchMock = mockApi()
-    renderPage(
-      <ModelCatalogPage />,
-      "/models?page=99999999999999999999999999&size=1001",
-    )
-    await screen.findByRole("list", { name: "Models" })
-    const request = fetchMock.mock.calls
-      .map(([input]) => String(input))
-      .find((url) => url.includes("catalog/models?"))
-    expect(request).toContain("skip=0")
-    expect(request).toContain("limit=25")
   })
 
   it("keeps the current rows visible until the next page arrives", async () => {

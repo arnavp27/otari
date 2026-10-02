@@ -161,21 +161,18 @@ describe("options", () => {
     // the filter matches on the display string and only a row knows both.
     expect(
       vendorOptions([
-        { value: "Z.ai", vendor_slug: "z-ai", count: 12 },
-        { value: "", vendor_slug: null, count: 0 },
+        { value: "Z.ai", vendor_slug: "z-ai" },
+        { value: "", vendor_slug: null },
       ]),
     ).toEqual([
-      { value: "", label: "Unknown vendor", markKey: undefined, count: 0 },
-      { value: "Z.ai", label: "Z.ai", markKey: "z-ai", count: 12 },
+      { value: "", label: "Unknown vendor", markKey: undefined },
+      { value: "Z.ai", label: "Z.ai", markKey: "z-ai" },
     ])
   })
 
   it("lists every provider instance once", () => {
     expect(
-      providerOptions([
-        { value: "fireworks", count: 12 },
-        { value: "nebius", count: 27 },
-      ]).map((o) => o.value),
+      providerOptions(["fireworks", "nebius"]).map((o) => o.value),
     ).toEqual(["fireworks", "nebius"])
   })
 

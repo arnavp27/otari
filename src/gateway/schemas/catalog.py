@@ -73,7 +73,14 @@ class CatalogCapability(StrEnum):
 class CatalogQuery(BaseModel):
     """Filters narrow the caller's catalog before sorting, counting, and paging."""
 
-    at_context: int | None = Field(default=None, ge=1, description="Compare prices at this many input tokens.")
+    at_context: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Compare prices for a request of this many input tokens: each model's minimum is taken "
+            "from the pricing tier that request would settle at. Omitted, the base rates compare."
+        ),
+    )
     search: str | None = Field(
         default=None,
         max_length=200,
@@ -111,35 +118,21 @@ class CatalogQuery(BaseModel):
     direction: Literal["asc", "desc"] = "asc"
     include_facets: bool = Field(
         default=False,
-        description=(
-            "Include counts over all matches before paging, with zero-count choices "
-            "retained from the authorized catalog."
-        ),
+        description="Include the filter choices drawn from the whole authorized catalog.",
     )
 
 
-class CatalogFacet(BaseModel):
-    value: str
-    count: int = Field(ge=0, description="Matching models before paging; one model can belong to several choices.")
-
-
-class CatalogVendorFacet(CatalogFacet):
+class CatalogVendorFacet(BaseModel):
+    value: str = Field(description="The vendor's name; empty for models whose vendor is unknown.")
     vendor_slug: str | None = None
 
 
 class CatalogFacets(BaseModel):
-    """Choices come from the authorized catalog; counts apply every active filter."""
+    """The filter rail's choices, from the caller's whole authorized catalog rather than one page."""
 
     total_count: int = Field(ge=0, description="Authorized models before any of the request's filters.")
-    provider_count: int = Field(ge=0, description="Distinct provider instances among matching models before paging.")
-    providers: list[CatalogFacet]
+    providers: list[str] = Field(description="Every provider instance offering an authorized model, sorted.")
     vendors: list[CatalogVendorFacet]
-    input_modalities: list[CatalogFacet]
-    output_modalities: list[CatalogFacet]
-    capabilities: list[CatalogFacet]
-    price_sources: list[CatalogFacet]
-    pricing: list[CatalogFacet]
-    source: list[CatalogFacet]
 
 
 class CatalogPage(BaseModel):

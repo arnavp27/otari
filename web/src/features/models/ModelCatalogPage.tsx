@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 import type { SortDescriptor } from "react-aria-components"
 import { FiChevronDown } from "react-icons/fi"
 
-import type { CatalogFacet, CatalogFacets, CatalogModelSummary } from "@/client"
+import type { CatalogFacets, CatalogModelSummary } from "@/client"
 import { DataTable, type DataTableColumn } from "@/design-system/data/DataTable"
 import { TablePagination } from "@/design-system/data/TablePagination"
 import { EmptyMessage } from "@/design-system/feedback/EmptyMessage"
@@ -52,7 +52,7 @@ import {
   formatRelative,
   formatReleaseDate,
 } from "@/shared/helpers/format"
-import { useUrlState, useUrlValue } from "@/shared/helpers/urlState"
+import { useUrlValue } from "@/shared/helpers/urlState"
 import { useDebounced } from "@/shared/hooks/useDebounced"
 
 // The catalog, grouped by model: a rail of filters on the left, and on the
@@ -152,13 +152,11 @@ function RadioList({
   value,
   onChange,
   options,
-  counts,
 }: {
   name: string
   value: string
   onChange: (value: string) => void
   options: { value: string; label: string }[]
-  counts?: CatalogFacet[]
 }) {
   return (
     <RadioGroup
@@ -166,21 +164,8 @@ function RadioList({
       hideLabel
       value={value}
       onChange={onChange}
-      options={options.map((option) => ({
-        ...option,
-        description: counts
-          ? `${formatNumber(counts.find((facet) => facet.value === option.value)?.count ?? 0)} matching models`
-          : undefined,
-      }))}
+      options={options}
     />
-  )
-}
-
-function FacetCount({ count }: { count: number }) {
-  return (
-    <span aria-hidden="true" className="text-mono-micro text-muted">
-      {formatNumber(count)}
-    </span>
   )
 }
 
@@ -226,13 +211,6 @@ function FilterRail({
             }
           >
             {MODALITY_LABELS[modality] ?? modality}
-            <FacetCount
-              count={
-                facets?.input_modalities.find(
-                  (facet) => facet.value === modality,
-                )?.count ?? 0
-              }
-            />
           </Checkbox>
         ))}
       </FilterGroup>
@@ -252,13 +230,6 @@ function FilterRail({
             }
           >
             {MODALITY_LABELS[modality] ?? modality}
-            <FacetCount
-              count={
-                facets?.output_modalities.find(
-                  (facet) => facet.value === modality,
-                )?.count ?? 0
-              }
-            />
           </Checkbox>
         ))}
       </FilterGroup>
@@ -298,7 +269,6 @@ function FilterRail({
             ) : (
               option.label
             )}
-            <FacetCount count={option.count} />
           </Checkbox>
         ))}
       </FilterGroup>
@@ -330,7 +300,6 @@ function FilterRail({
             ) : (
               option.label
             )}
-            <FacetCount count={option.count} />
           </Checkbox>
         ))}
       </FilterGroup>
@@ -347,13 +316,6 @@ function FilterRail({
             }
           >
             {entry.label}
-            <FacetCount
-              count={
-                facets?.capabilities.find(
-                  (facet) => facet.value === entry.value,
-                )?.count ?? 0
-              }
-            />
           </Checkbox>
         ))}
       </FilterGroup>
@@ -363,7 +325,6 @@ function FilterRail({
           value={filters.pricing}
           onChange={(value) => set("pricing", value)}
           options={PRICING_OPTIONS}
-          counts={facets?.pricing}
         />
       </FilterGroup>
       <FilterGroup label="Source" count={filters.source !== "all" ? 1 : 0}>
@@ -372,7 +333,6 @@ function FilterRail({
           value={filters.source}
           onChange={(value) => set("source", value)}
           options={SOURCE_OPTIONS}
-          counts={facets?.source}
         />
       </FilterGroup>
       <FilterGroup
@@ -598,7 +558,6 @@ export function ModelCatalogView({
   onOpen,
   publicView = false,
   initialProvider = "",
-  pagination,
 }: {
   /** Where a pressed card goes. */
   onOpen: (modelId: string) => void
@@ -609,12 +568,6 @@ export function ModelCatalogView({
   publicView?: boolean
   /** A provider instance to start filtered on. */
   initialProvider?: string
-  pagination?: {
-    page: number
-    pageSize: number
-    onPageChange: (page: number) => void
-    onPageSizeChange: (size: number) => void
-  }
 }) {
   const [filters, setFilters] = useState<CatalogFilters>({
     ...EMPTY_FILTERS,
@@ -635,18 +588,8 @@ export function ModelCatalogView({
     }
   }
   const [railOpen, setRailOpen] = useState(false)
-  const [localPage, setLocalPage] = useState(0)
-  const [localPageSize, setLocalPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const page = pagination?.page ?? localPage
-  const pageSize = pagination?.pageSize ?? localPageSize
-  const setPage = pagination?.onPageChange ?? setLocalPage
-  const changePageSize = (size: number) => {
-    if (pagination) pagination.onPageSizeChange(size)
-    else {
-      setLocalPageSize(size)
-      setLocalPage(0)
-    }
-  }
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [tableSort, setTableSort] = useState<{
     column: CatalogSortColumn
     direction: "asc" | "desc"
@@ -668,14 +611,15 @@ export function ModelCatalogView({
   const pageRows = catalog.data?.models ?? []
   const count = catalog.data?.count ?? 0
   const facets = catalog.data?.facets ?? undefined
-  const providerCount = facets?.provider_count
-  const hasModels = (facets?.total_count ?? count) > 0
+  const totalCount = facets?.total_count ?? count
+  const providerCount = facets?.providers.length
+  const hasModels = totalCount > 0
 
   useEffect(() => {
     if (!catalog.data || catalog.isPlaceholderData) return
     const lastPage = Math.max(0, Math.ceil(catalog.data.count / pageSize) - 1)
     if (page > lastPage) setPage(lastPage)
-  }, [catalog.data, catalog.isPlaceholderData, page, pageSize, setPage])
+  }, [catalog.data, catalog.isPlaceholderData, page, pageSize])
   const activeCount = activeFilterCount(filters)
 
   const updateFilters = (next: CatalogFilters) => {
@@ -703,7 +647,7 @@ export function ModelCatalogView({
         <p className="max-w-[38.75rem] text-sm text-muted">
           {catalog.data ? (
             <>
-              {formatNumber(count)} {count === 1 ? "model" : "models"}
+              {formatNumber(totalCount)} {totalCount === 1 ? "model" : "models"}
               {providerCount !== undefined ? (
                 <>
                   {" "}
@@ -853,7 +797,10 @@ export function ModelCatalogView({
             total={count}
             rowsOnPage={pageRows.length}
             onPageChange={setPage}
-            onPageSizeChange={changePageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size)
+              setPage(0)
+            }}
           />
         </div>
       </div>
@@ -869,23 +816,10 @@ export function ModelCatalogPage() {
   // The key remounts the view when that param changes, since the filter it
   // seeds is state the reader edits from there on.
   const providerParam = useUrlValue("provider")
-  const paging = useUrlState({ page: "0", size: String(DEFAULT_PAGE_SIZE) })
-  const size = paging.getNumber("size")
-  const pageSize = size > 0 && size <= 1000 ? size : DEFAULT_PAGE_SIZE
-  const requestedPage = paging.getNumber("page")
-  const page = Number.isSafeInteger(requestedPage * pageSize)
-    ? Math.max(0, requestedPage)
-    : 0
   return (
     <ModelCatalogView
       key={providerParam}
       initialProvider={providerParam}
-      pagination={{
-        page,
-        pageSize,
-        onPageChange: (page) => paging.patch({ page }),
-        onPageSizeChange: (size) => paging.patch({ size, page: 0 }),
-      }}
       onOpen={(id) => {
         void navigate({ to: "/models/$", params: { _splat: id } })
       }}

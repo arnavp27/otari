@@ -1601,7 +1601,7 @@
               ],
               "query": [
                 {
-                  "description": "Compare prices at this many input tokens.",
+                  "description": "Compare prices for a request of this many input tokens: each model's minimum is taken from the pricing tier that request would settle at. Omitted, the base rates compare.",
                   "disabled": true,
                   "key": "at_context",
                   "value": ""
@@ -1697,7 +1697,7 @@
                   "value": ""
                 },
                 {
-                  "description": "Include counts over all matches before paging, with zero-count choices retained from the authorized catalog.",
+                  "description": "Include the filter choices drawn from the whole authorized catalog.",
                   "disabled": true,
                   "key": "include_facets",
                   "value": ""

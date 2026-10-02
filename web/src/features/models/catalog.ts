@@ -1,6 +1,5 @@
 import type {
   CatalogCapabilities,
-  CatalogFacet,
   CatalogModelSummary,
   CatalogOffering,
   CatalogQueryParams,
@@ -224,18 +223,16 @@ export function vendorOptions(facets: CatalogVendorFacet[]) {
       value: facet.value,
       label: facet.value || "Unknown vendor",
       markKey: facet.vendor_slug ?? undefined,
-      count: facet.count,
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
 }
 
-/** Provider labels are presentation; their choices and counts come from the server. */
-export function providerOptions(facets: CatalogFacet[]) {
-  return facets
-    .map((facet) => ({
-      value: facet.value,
-      label: providerDisplayName(facet.value),
-      count: facet.count,
+/** The server's complete provider choices, named for display. */
+export function providerOptions(providers: string[]) {
+  return providers
+    .map((provider) => ({
+      value: provider,
+      label: providerDisplayName(provider),
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
 }

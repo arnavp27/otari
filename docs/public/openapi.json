@@ -2546,82 +2546,15 @@
         "title": "CatalogElsewhere",
         "type": "object"
       },
-      "CatalogFacet": {
-        "properties": {
-          "count": {
-            "description": "Matching models before paging; one model can belong to several choices.",
-            "minimum": 0.0,
-            "title": "Count",
-            "type": "integer"
-          },
-          "value": {
-            "title": "Value",
-            "type": "string"
-          }
-        },
-        "required": [
-          "value",
-          "count"
-        ],
-        "title": "CatalogFacet",
-        "type": "object"
-      },
       "CatalogFacets": {
-        "description": "Choices come from the authorized catalog; counts apply every active filter.",
+        "description": "The filter rail's choices, from the caller's whole authorized catalog rather than one page.",
         "properties": {
-          "capabilities": {
-            "items": {
-              "$ref": "#/components/schemas/CatalogFacet"
-            },
-            "title": "Capabilities",
-            "type": "array"
-          },
-          "input_modalities": {
-            "items": {
-              "$ref": "#/components/schemas/CatalogFacet"
-            },
-            "title": "Input Modalities",
-            "type": "array"
-          },
-          "output_modalities": {
-            "items": {
-              "$ref": "#/components/schemas/CatalogFacet"
-            },
-            "title": "Output Modalities",
-            "type": "array"
-          },
-          "price_sources": {
-            "items": {
-              "$ref": "#/components/schemas/CatalogFacet"
-            },
-            "title": "Price Sources",
-            "type": "array"
-          },
-          "pricing": {
-            "items": {
-              "$ref": "#/components/schemas/CatalogFacet"
-            },
-            "title": "Pricing",
-            "type": "array"
-          },
-          "provider_count": {
-            "description": "Distinct provider instances among matching models before paging.",
-            "minimum": 0.0,
-            "title": "Provider Count",
-            "type": "integer"
-          },
           "providers": {
+            "description": "Every provider instance offering an authorized model, sorted.",
             "items": {
-              "$ref": "#/components/schemas/CatalogFacet"
+              "type": "string"
             },
             "title": "Providers",
-            "type": "array"
-          },
-          "source": {
-            "items": {
-              "$ref": "#/components/schemas/CatalogFacet"
-            },
-            "title": "Source",
             "type": "array"
           },
           "total_count": {
@@ -2640,15 +2573,8 @@
         },
         "required": [
           "total_count",
-          "provider_count",
           "providers",
-          "vendors",
-          "input_modalities",
-          "output_modalities",
-          "capabilities",
-          "price_sources",
-          "pricing",
-          "source"
+          "vendors"
         ],
         "title": "CatalogFacets",
         "type": "object"
@@ -3359,13 +3285,8 @@
       },
       "CatalogVendorFacet": {
         "properties": {
-          "count": {
-            "description": "Matching models before paging; one model can belong to several choices.",
-            "minimum": 0.0,
-            "title": "Count",
-            "type": "integer"
-          },
           "value": {
+            "description": "The vendor's name; empty for models whose vendor is unknown.",
             "title": "Value",
             "type": "string"
           },
@@ -3382,8 +3303,7 @@
           }
         },
         "required": [
-          "value",
-          "count"
+          "value"
         ],
         "title": "CatalogVendorFacet",
         "type": "object"
@@ -21701,7 +21621,7 @@
         "operationId": "catalog-list_catalog",
         "parameters": [
           {
-            "description": "Compare prices at this many input tokens.",
+            "description": "Compare prices for a request of this many input tokens: each model's minimum is taken from the pricing tier that request would settle at. Omitted, the base rates compare.",
             "in": "query",
             "name": "at_context",
             "required": false,
@@ -21715,7 +21635,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Compare prices at this many input tokens.",
+              "description": "Compare prices for a request of this many input tokens: each model's minimum is taken from the pricing tier that request would settle at. Omitted, the base rates compare.",
               "title": "At Context"
             }
           },
@@ -21951,13 +21871,13 @@
             }
           },
           {
-            "description": "Include counts over all matches before paging, with zero-count choices retained from the authorized catalog.",
+            "description": "Include the filter choices drawn from the whole authorized catalog.",
             "in": "query",
             "name": "include_facets",
             "required": false,
             "schema": {
               "default": false,
-              "description": "Include counts over all matches before paging, with zero-count choices retained from the authorized catalog.",
+              "description": "Include the filter choices drawn from the whole authorized catalog.",
               "title": "Include Facets",
               "type": "boolean"
             }

@@ -299,7 +299,7 @@ def test_an_api_key_sees_only_the_models_its_allow_list_permits(
     body = _get(priced, f"{API_ROOT}/catalog/models", headers=key_header, params={"include_facets": True})
     assert [model["id"] for model in body["models"]] == ["moonshotai/kimi-k2.6"]
     assert body["facets"]["total_count"] == 1
-    assert body["facets"]["providers"] == [{"value": "nebius", "count": 1}]
+    assert body["facets"]["providers"] == ["nebius"]
     assert [facet["value"] for facet in body["facets"]["vendors"]] == ["Moonshot AI"]
     filtered = _get(
         priced,
@@ -309,7 +309,7 @@ def test_an_api_key_sees_only_the_models_its_allow_list_permits(
     )
     assert filtered["count"] == 0
     assert filtered["models"] == []
-    assert filtered["facets"]["providers"] == [{"value": "nebius", "count": 0}]
+    assert filtered["facets"]["providers"] == ["nebius"]
 
     with patch.object(mcs, "_fetch", new=AsyncMock(return_value=CATALOG)):
         denied = priced.get(f"{API_ROOT}/catalog/models/z-ai/glm-5.3", headers=key_header)
@@ -676,7 +676,7 @@ def test_filter_and_sort_parameters_apply_before_pagination(
     assert [model["id"] for model in body["models"]] == expected
 
 
-def test_facet_counts_cover_all_matches_before_the_response_page(
+def test_facets_describe_the_whole_catalog_rather_than_the_page(
     priced: TestClient, master_header: dict[str, str]
 ) -> None:
     body = _get(
@@ -688,8 +688,7 @@ def test_facet_counts_cover_all_matches_before_the_response_page(
     assert len(body["models"]) == 1
     assert body["count"] == 2
     assert body["facets"]["total_count"] == 2
-    assert body["facets"]["provider_count"] == 2
-    assert body["facets"]["providers"] == [{"value": "fireworks", "count": 1}, {"value": "nebius", "count": 2}]
+    assert body["facets"]["providers"] == ["fireworks", "nebius"]
     empty = _get(
         priced,
         f"{API_ROOT}/catalog/models",
@@ -697,9 +696,7 @@ def test_facet_counts_cover_all_matches_before_the_response_page(
         params={"include_facets": True, "search": "no-match"},
     )
     assert empty["count"] == 0
-    assert empty["facets"]["total_count"] == 2
-    assert empty["facets"]["provider_count"] == 0
-    assert empty["facets"]["providers"] == [{"value": "fireworks", "count": 0}, {"value": "nebius", "count": 0}]
+    assert empty["facets"] == body["facets"]
     assert _get(priced, f"{API_ROOT}/catalog/models", headers=master_header)["facets"] is None
 
 
