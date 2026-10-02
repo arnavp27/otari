@@ -222,7 +222,33 @@ where it has one, and for a signed-in caller the organization's last thirty
 days on that offering: requests, cache hit rate, and the effective price per
 million tokens after cache reads and tiers.
 
-### Catalog spellings
+### Browsing the grouped catalog
+
+The Models page requests one page at a time from `GET /api/v1/catalog/models`.
+Filters and sorting apply to the caller's full authorized catalog before `skip`
+and `limit` select a page. `count` is the number of matching models before paging;
+`limit` defaults to 100 and is capped at 1,000.
+
+Repeat `provider` or `vendor` to match any selected value. An empty `vendor`
+selects models whose vendor is unknown. Repeat `input_modality`,
+`output_modality`, or `capability` to require every selected value. The endpoint
+also accepts `search`, `min_context`, `max_input`, `pricing`, `source`, and
+`released_within_days`. Release windows end today in UTC and exclude unknown
+and future dates. A price ceiling excludes models with no known input rate.
+
+`sort` accepts `name`, `released`, `input`, `output`, `context`, or `providers`,
+with `direction=asc` or `desc`. Unknown values sort last in either direction;
+names and catalog ids break ties so pages have a stable order.
+
+Request `include_facets=true` to receive choices from the complete authorized
+catalog, including choices absent from the requested page. Their counts apply
+all active filters before paging, and choices with zero matches remain visible.
+`facets.total_count` counts authorized models before filtering;
+`facets.provider_count` counts distinct providers across all matching models.
+`facets` is null unless requested. These counts and choices never
+include models or provider offerings the caller cannot access.
+
+## Catalog spellings
 
 A provider's own id can be long, so the gateway also accepts the two spellings
 the catalog shows. Each is relabeled like an alias, so a response's `model` is

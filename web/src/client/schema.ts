@@ -6671,6 +6671,11 @@ export interface components {
             tool_call: boolean;
         };
         /**
+         * CatalogCapability
+         * @enum {string}
+         */
+        CatalogCapability: "tool_call" | "reasoning" | "structured_output" | "attachment" | "open_weights";
+        /**
          * CatalogCredential
          * @description Whose key serves a catalog offering, which also says who may price it.
          * @enum {string}
@@ -6685,6 +6690,48 @@ export interface components {
             name: string;
             /** Provider Type */
             provider_type: string;
+        };
+        /** CatalogFacet */
+        CatalogFacet: {
+            /**
+             * Count
+             * @description Matching models before paging; one model can belong to several choices.
+             */
+            count: number;
+            /** Value */
+            value: string;
+        };
+        /**
+         * CatalogFacets
+         * @description Choices come from the authorized catalog; counts apply every active filter.
+         */
+        CatalogFacets: {
+            /** Capabilities */
+            capabilities: components["schemas"]["CatalogFacet"][];
+            /** Input Modalities */
+            input_modalities: components["schemas"]["CatalogFacet"][];
+            /** Output Modalities */
+            output_modalities: components["schemas"]["CatalogFacet"][];
+            /** Price Sources */
+            price_sources: components["schemas"]["CatalogFacet"][];
+            /** Pricing */
+            pricing: components["schemas"]["CatalogFacet"][];
+            /**
+             * Provider Count
+             * @description Distinct provider instances among matching models before paging.
+             */
+            provider_count: number;
+            /** Providers */
+            providers: components["schemas"]["CatalogFacet"][];
+            /** Source */
+            source: components["schemas"]["CatalogFacet"][];
+            /**
+             * Total Count
+             * @description Authorized models before any of the request's filters.
+             */
+            total_count: number;
+            /** Vendors */
+            vendors: components["schemas"]["CatalogVendorFacet"][];
         };
         /**
          * CatalogModelDetail
@@ -6959,7 +7006,7 @@ export interface components {
         CatalogResponse: {
             /**
              * Count
-             * @description Models matching the search, before the window, so a caller can page without reading them all.
+             * @description Models matching all filters before paging.
              */
             count: number;
             /**
@@ -6972,6 +7019,8 @@ export interface components {
              * @description When the accepted genai-prices snapshot was taken. Null while the bundled dataset serves.
              */
             defaults_as_of: string | null;
+            /** @description Present when include_facets is requested. */
+            facets?: components["schemas"]["CatalogFacets"] | null;
             /**
              * Metadata Available
              * @description False when models.dev could not be read; descriptions are then absent.
@@ -6979,6 +7028,18 @@ export interface components {
             metadata_available: boolean;
             /** Models */
             models: components["schemas"]["CatalogModelSummary"][];
+        };
+        /** CatalogVendorFacet */
+        CatalogVendorFacet: {
+            /**
+             * Count
+             * @description Matching models before paging; one model can belong to several choices.
+             */
+            count: number;
+            /** Value */
+            value: string;
+            /** Vendor Slug */
+            vendor_slug?: string | null;
         };
         /**
          * CeremonyOptions
@@ -15437,14 +15498,36 @@ export interface operations {
     "catalog-list_catalog": {
         parameters: {
             query?: {
-                /** @description Compare prices for a request of this many input tokens: each model's minimum is taken from the pricing tier that request would settle at. Omitted, the base rates compare. */
+                /** @description Compare prices at this many input tokens. */
                 at_context?: number | null;
-                /** @description Narrow to models whose name, catalog id or any selector contains this text, case-insensitively. */
+                /** @description Case-insensitive text in a model's name, vendor, id, selectors, or provider instances. */
                 search?: string | null;
-                /** @description Number of models to skip */
+                /** @description Number of matching models to skip. */
                 skip?: number;
-                /** @description Maximum number of models to return */
+                /** @description Maximum number of models to return. */
                 limit?: number;
+                /** @description Match any named provider instance. */
+                provider?: string[];
+                /** @description Match any vendor; an empty value names unknown vendors. */
+                vendor?: string[];
+                /** @description Require every input modality. */
+                input_modality?: string[];
+                /** @description Require every output modality. */
+                output_modality?: string[];
+                /** @description Require every capability. */
+                capability?: components["schemas"]["CatalogCapability"][];
+                /** @description Minimum context window; unknown windows do not match. */
+                min_context?: number;
+                /** @description Maximum cheapest input price per million tokens; unpriced models do not match. */
+                max_input?: number | null;
+                pricing?: "all" | "custom" | "default" | "priced" | "unpriced";
+                source?: "all" | "discovered" | "custom";
+                /** @description Release window ending today (UTC); zero disables it. Unknown and future releases do not match. */
+                released_within_days?: number;
+                sort?: "name" | "released" | "input" | "output" | "context" | "providers";
+                direction?: "asc" | "desc";
+                /** @description Include counts over all matches before paging, with zero-count choices retained from the authorized catalog. */
+                include_facets?: boolean;
             };
             header?: never;
             path?: never;
