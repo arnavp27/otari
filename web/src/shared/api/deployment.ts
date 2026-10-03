@@ -7,9 +7,9 @@ import type {
   UpdateDeploymentUserRequest,
 } from "@/client"
 import {
-  ApiError,
   apiFetch,
   DASHBOARD_BUILD_PATH,
+  isGatewayUnreachable,
   siteFetch,
 } from "@/shared/api/client"
 import { fetchAllPaged } from "@/shared/api/paging"
@@ -46,8 +46,9 @@ export function useDashboardBuild() {
  * Confirm a lost gateway connection independently of cached page errors.
  *
  * Liveness is a cheap read in every deployment, without provider or control
- * plane checks. Retry network failures twice before declaring an outage, then
- * keep polling so recovery does not depend on revisiting the failed page.
+ * plane checks. Retry missing or invalid replies twice before declaring an
+ * outage, then keep polling so recovery does not depend on revisiting the failed
+ * page.
  */
 export function useGatewayLiveness() {
   return useQuery({
@@ -56,7 +57,7 @@ export function useGatewayLiveness() {
     // The probe must run even offline: a paused query cannot confirm an outage.
     networkMode: "always",
     retry: (failureCount, error) =>
-      error instanceof ApiError && error.status === 0 && failureCount < 2,
+      isGatewayUnreachable(error) && failureCount < 2,
     refetchInterval: HEALTH_POLL_MS,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,

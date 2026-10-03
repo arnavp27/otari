@@ -89,23 +89,50 @@ describe("ConnectionStatus", () => {
     expect(fetch.mock.calls.every(([url]) => url === LIVENESS_URL)).toBe(true)
   })
 
-  it("absorbs a single dropped liveness request without showing an outage", async () => {
-    let respond: (response: Response) => void = () => undefined
-    const retry = new Promise<Response>((resolve) => {
-      respond = resolve
-    })
-    const fetch = vi
-      .spyOn(globalThis, "fetch")
-      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
-      .mockReturnValueOnce(retry)
-    const { client } = renderStatus()
+  it("reports an outage when an intermediary serves HTML with HTTP 200", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response("<html><body>Gateway unavailable</body></html>", {
+          status: 200,
+          headers: { "Content-Type": "text/html" },
+        }),
+    )
+    renderStatus()
 
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
-    await act(async () => respond(jsonResponse("I'm alive!")))
-    await waitForLiveness(client, "success")
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /Can’t reach the gateway/,
+    )
+    expect(fetch).toHaveBeenCalledTimes(3)
   })
+
+  it.each(["network failure", "HTML fallback"])(
+    "absorbs a single %s without showing an outage",
+    async (failure) => {
+      let respond: (response: Response) => void = () => undefined
+      const retry = new Promise<Response>((resolve) => {
+        respond = resolve
+      })
+      const fetch = vi.spyOn(globalThis, "fetch")
+      if (failure === "network failure") {
+        fetch.mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      } else {
+        fetch.mockResolvedValueOnce(
+          new Response("<html>Gateway unavailable</html>", {
+            status: 200,
+            headers: { "Content-Type": "text/html" },
+          }),
+        )
+      }
+      fetch.mockReturnValueOnce(retry)
+      const { client } = renderStatus()
+
+      await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      await act(async () => respond(jsonResponse("I'm alive!")))
+      await waitForLiveness(client, "success")
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    },
+  )
 
   it("does not report an outage while a healthy gateway confirms a page failure", async () => {
     let respond: (response: Response) => void = () => undefined

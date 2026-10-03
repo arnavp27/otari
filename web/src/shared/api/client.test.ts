@@ -6,6 +6,7 @@ import {
   apiFetch,
   createSession,
   deleteSession,
+  isGatewayUnreachable,
   siteFetch,
 } from "./client"
 
@@ -23,6 +24,23 @@ afterEach(() => {
   vi.restoreAllMocks()
   policy.origin = ""
   policy.credentials = "same-origin"
+})
+
+describe("isGatewayUnreachable", () => {
+  it("recognizes network failures and invalid gateway replies", () => {
+    expect(isGatewayUnreachable(new ApiError(0, "Failed to fetch"))).toBe(true)
+    expect(
+      isGatewayUnreachable(new ApiError(200, "Not JSON", "invalid-response")),
+    ).toBe(true)
+  })
+
+  it("does not classify genuine HTTP refusals or unrelated errors as outages", () => {
+    for (const status of [401, 403, 500]) {
+      expect(isGatewayUnreachable(new ApiError(status, "Refused"))).toBe(false)
+    }
+    expect(isGatewayUnreachable(new Error("Unrelated failure"))).toBe(false)
+    expect(isGatewayUnreachable(null)).toBe(false)
+  })
 })
 
 describe("the request policy", () => {
@@ -152,6 +170,7 @@ describe("apiFetch", () => {
     await expect(failure).rejects.toBeInstanceOf(ApiError)
     await expect(failure).rejects.toMatchObject({
       status: 200,
+      kind: "invalid-response",
       message: expect.stringContaining("not JSON"),
     })
     await expect(failure).rejects.not.toMatchObject({

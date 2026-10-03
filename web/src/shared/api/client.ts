@@ -11,14 +11,29 @@ import type { OAuthAuthorizeResponse, OAuthCallbackRequest } from "@/client"
 import { requestPolicy } from "@/shared/api/overlayRequestPolicy"
 import { getPasskeyAssertion } from "@/shared/helpers/webauthn"
 
+type ApiErrorKind = "network" | "http" | "invalid-response"
+
 export class ApiError extends Error {
   status: number
+  kind: ApiErrorKind
 
-  constructor(status: number, message: string) {
+  constructor(
+    status: number,
+    message: string,
+    kind: ApiErrorKind = status === 0 ? "network" : "http",
+  ) {
     super(message)
     this.name = "ApiError"
     this.status = status
+    this.kind = kind
   }
+}
+
+export function isGatewayUnreachable(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.kind === "network" || error.kind === "invalid-response")
+  )
 }
 
 // AuthProvider registers a callback so a 401 anywhere can drop the session
@@ -448,6 +463,7 @@ async function readJson<T>(
       throw new ApiError(
         response.status,
         `The gateway's reply was not JSON (HTTP ${response.status}). Something between this page and the gateway answered in its place, so whether the request was carried out is unknown.`,
+        "invalid-response",
       )
     }
     throw error

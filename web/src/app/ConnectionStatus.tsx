@@ -1,6 +1,6 @@
 import { FiAlertTriangle } from "react-icons/fi"
 
-import { ApiError } from "@/shared/api/client"
+import { isGatewayUnreachable } from "@/shared/api/client"
 import { useGatewayLiveness } from "@/shared/api/deployment"
 
 // A bottom-right toast that surfaces a lost backend connection at the app level,
@@ -10,10 +10,9 @@ import { useGatewayLiveness } from "@/shared/api/deployment"
 // gateway responds.
 export function ConnectionStatus() {
   const { isError, error } = useGatewayLiveness()
-  // Only a confirmed transport failure is an outage. HTTP errors mean the
-  // gateway answered; old errors on other queries say nothing about it now.
-  const isUnreachable =
-    isError && error instanceof ApiError && error.status === 0
+  // Missing or invalid liveness replies confirm an outage. Genuine HTTP
+  // refusals mean the gateway answered, even if the request was unsuccessful.
+  const isUnreachable = isError && isGatewayUnreachable(error)
   if (!isUnreachable) {
     return null
   }
