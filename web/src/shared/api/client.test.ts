@@ -178,6 +178,30 @@ describe("apiFetch", () => {
     })
   })
 
+  it("classifies a failed response-body decoding as an invalid reply", async () => {
+    const response = new Response("invalid encoding", { status: 200 })
+    vi.spyOn(response, "json").mockRejectedValue(
+      new TypeError("Failed to decode response body"),
+    )
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response)
+
+    await expect(apiFetch("/health/liveness")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 200,
+      kind: "invalid-response",
+    })
+  })
+
+  it("preserves intentional cancellation while reading the response body", async () => {
+    const response = new Response("", { status: 200 })
+    const aborted = new DOMException("Cancelled by caller", "AbortError")
+    vi.spyOn(response, "json").mockRejectedValue(aborted)
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response)
+
+    await expect(apiFetch("/health/liveness")).rejects.toBe(aborted)
+    expect(isGatewayUnreachable(aborted)).toBe(false)
+  })
+
   it("passes a caller's signal through instead of imposing its own", async () => {
     const controller = new AbortController()
     const seen: (AbortSignal | null | undefined)[] = []

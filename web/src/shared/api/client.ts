@@ -446,8 +446,8 @@ function isTimeout(error: unknown): boolean {
  * says the opposite: `errorMessage` renders it verbatim, and the markup it
  * quotes reads as a defect in the page that made the call (otari-ai#2147).
  *
- * Only `SyntaxError`. A body that fails to arrive at all is a different fault
- * and keeps its own reporting.
+ * A decoding `TypeError` also means no usable reply arrived. Keep timeouts
+ * distinct and let intentional cancellation retain its original error.
  */
 async function readJson<T>(
   response: Response,
@@ -458,6 +458,13 @@ async function readJson<T>(
   } catch (error) {
     if (isTimeout(error)) {
       throw new ApiError(0, timeoutMessage)
+    }
+    if (error instanceof TypeError) {
+      throw new ApiError(
+        response.status,
+        `The gateway's reply could not be decoded (HTTP ${response.status}). Whether the request was carried out is unknown.`,
+        "invalid-response",
+      )
     }
     if (error instanceof SyntaxError) {
       throw new ApiError(

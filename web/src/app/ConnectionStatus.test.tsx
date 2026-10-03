@@ -105,7 +105,23 @@ describe("ConnectionStatus", () => {
     expect(fetch).toHaveBeenCalledTimes(3)
   })
 
-  it.each(["network failure", "HTML fallback"])(
+  it("reports an outage when the liveness body cannot be decoded", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      const response = new Response("invalid encoding", { status: 200 })
+      vi.spyOn(response, "json").mockRejectedValue(
+        new TypeError("Failed to decode response body"),
+      )
+      return response
+    })
+    renderStatus()
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /Can’t reach the gateway/,
+    )
+    expect(fetch).toHaveBeenCalledTimes(3)
+  })
+
+  it.each(["network failure", "HTML fallback", "body decoding failure"])(
     "absorbs a single %s without showing an outage",
     async (failure) => {
       let respond: (response: Response) => void = () => undefined
@@ -115,13 +131,19 @@ describe("ConnectionStatus", () => {
       const fetch = vi.spyOn(globalThis, "fetch")
       if (failure === "network failure") {
         fetch.mockRejectedValueOnce(new TypeError("Failed to fetch"))
-      } else {
+      } else if (failure === "HTML fallback") {
         fetch.mockResolvedValueOnce(
           new Response("<html>Gateway unavailable</html>", {
             status: 200,
             headers: { "Content-Type": "text/html" },
           }),
         )
+      } else {
+        const response = new Response("invalid encoding", { status: 200 })
+        vi.spyOn(response, "json").mockRejectedValue(
+          new TypeError("Failed to decode response body"),
+        )
+        fetch.mockResolvedValueOnce(response)
       }
       fetch.mockReturnValueOnce(retry)
       const { client } = renderStatus()
